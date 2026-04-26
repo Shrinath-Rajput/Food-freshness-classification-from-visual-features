@@ -9,8 +9,8 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ✅ LOAD MODEL
-predictor = PredictPipeline("artifacts/model.h5")
+# ✅ LOAD TFLITE MODEL (FIXED)
+predictor = PredictPipeline("artifacts/model.tflite")
 
 CLASS_INDICES = {
     "freshapple": 0,
@@ -39,8 +39,9 @@ def predict():
         # 🔥 PREDICT
         result = predictor.predict(path, CLASS_INDICES)
 
-        # delete temp file
-        os.remove(path)
+        # 🧹 delete temp file
+        if os.path.exists(path):
+            os.remove(path)
 
         # safety check
         if not result or "class" not in result:
