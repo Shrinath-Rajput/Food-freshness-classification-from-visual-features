@@ -9,7 +9,7 @@ const FormData = require("form-data");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ⚠️ Flask API (Railway env मधून)
+// ⚠️ Flask API
 const FLASK_URL = process.env.FLASK_URL;
 
 app.set("view engine", "ejs");
@@ -43,8 +43,10 @@ let db;
     `);
 
     console.log("✅ DB Connected");
+
   } catch (err) {
     console.log("❌ DB ERROR:", err.message);
+    db = null; // 🔥 IMPORTANT (crash avoid)
   }
 })();
 
@@ -95,14 +97,18 @@ app.post("/predict", upload.single("image"), async (req, res) => {
     const product_name = null;
 
     // ================= SAVE =================
-    await db.query(
-      `INSERT INTO results 
-      (image, predicted_class, product_name, freshness, confidence)
-      VALUES (?, ?, ?, ?, ?)`,
-      [imagePath, predicted_class, product_name, freshness, confidence]
-    );
+    if (db) {   // 🔥 IMPORTANT FIX
+      await db.query(
+        `INSERT INTO results 
+        (image, predicted_class, product_name, freshness, confidence)
+        VALUES (?, ?, ?, ?, ?)`,
+        [imagePath, predicted_class, product_name, freshness, confidence]
+      );
 
-    console.log("✅ Saved to DB");
+      console.log("✅ Saved to DB");
+    } else {
+      console.log("⚠️ DB not connected, skipping save");
+    }
 
     res.json({
       success: true,
@@ -126,6 +132,8 @@ app.post("/predict", upload.single("image"), async (req, res) => {
 // ================= DASHBOARD =================
 app.get("/dashboard", async (req, res) => {
   try {
+    if (!db) throw new Error("DB not connected");
+
     const [data] = await db.query("SELECT * FROM results ORDER BY id DESC");
 
     res.render("dashboard", {
@@ -153,15 +161,20 @@ app.get("/dashboard", async (req, res) => {
 
 // ================= DELETE =================
 app.post("/delete/:id", async (req, res) => {
-  await db.query("DELETE FROM results WHERE id=?", [req.params.id]);
+  if (db) {
+    await db.query("DELETE FROM results WHERE id=?", [req.params.id]);
+  }
   res.redirect("/dashboard");
 });
 
 // ================= ANALYTICS =================
 app.get("/analytics", async (req, res) => {
   try {
+    if (!db) throw new Error("DB not connected");
+
     const [data] = await db.query("SELECT * FROM results");
     res.render("analytics", { data });
+
   } catch (err) {
     res.render("analytics", { data: [] });
   }
