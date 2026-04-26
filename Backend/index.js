@@ -7,9 +7,9 @@ const path = require("path");
 const FormData = require("form-data");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// ⚠️ Flask API
+// ⚠️ Flask API (Railway env मधून)
 const FLASK_URL = process.env.FLASK_URL;
 
 app.set("view engine", "ejs");
@@ -23,10 +23,11 @@ let db;
 (async () => {
   try {
     db = await mysql.createConnection({
-      host: "localhost",
-      user: "root",
-      password: "shrinath1814",
-      database: "food_db"
+      host: process.env.MYSQLHOST,
+      user: process.env.MYSQLUSER,
+      password: process.env.MYSQLPASSWORD,
+      database: process.env.MYSQLDATABASE,
+      port: process.env.MYSQLPORT
     });
 
     await db.query(`
@@ -90,11 +91,7 @@ app.post("/predict", upload.single("image"), async (req, res) => {
 
     const predicted_class = pred.class;
     const confidence = pred.confidence;
-
-    // ✅ ONLY FRESH / ROTTEN (MAIN FIX)
     const freshness = pred.freshness;
-
-    // ❌ REMOVE PRODUCT (NO APPLE SHOW)
     const product_name = null;
 
     // ================= SAVE =================
@@ -107,7 +104,6 @@ app.post("/predict", upload.single("image"), async (req, res) => {
 
     console.log("✅ Saved to DB");
 
-    // ✅ SEND JSON (frontend handle करेल)
     res.json({
       success: true,
       prediction: {
@@ -173,5 +169,5 @@ app.get("/analytics", async (req, res) => {
 
 // ================= START =================
 app.listen(PORT, () => {
-  console.log(`🚀 Server running: http://localhost:${PORT}`);
-}); 
+  console.log(`🚀 Server running`);
+});
