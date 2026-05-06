@@ -1,4 +1,6 @@
 ﻿# 🔧 Build Fix (IMPORTANT)
+pip==24.0
+setuptools==68.2.2
 setuptools>=68.0.0
 wheel
 
@@ -38,6 +40,3 @@ requests==2.31.0
 # Development
 python-dateutil==2.8.2
 pytz==2023.3
-setuptools
-wheel
-gunicorn
