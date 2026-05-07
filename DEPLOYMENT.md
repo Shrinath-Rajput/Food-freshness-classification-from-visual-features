@@ -402,6 +402,191 @@ logrotate -f /etc/logrotate.d/food-app
 
 ---
 
+## 🎯 Render.com Deployment (Recommended)
+
+### Why Render?
+- Free tier available
+- Automatic Git deployment
+- Built-in environment variables
+- No credit card for free tier
+- Easy scaling
+
+### Prerequisites
+1. GitHub account with your repo
+2. Render.com account (free)
+3. Model files committed to Git
+
+### Important: Commit Model Files to Git
+
+The most common issue is that model files aren't being deployed. You MUST commit them:
+
+```bash
+# Make sure artifacts folder is not in .gitignore
+git add artifacts/model.tflite
+git add artifacts/model.h5
+git commit -m "Add trained models"
+git push origin main
+```
+
+Verify in .gitignore:
+- Remove any lines that exclude `artifacts/` or `*.h5` or `*.tflite`
+- Keep other ignores like `dataset/`, `uploads/`, etc.
+
+### Step 1: Create Render Account
+
+1. Go to https://render.com
+2. Sign up with GitHub
+3. Connect your GitHub repository
+
+### Step 2: Deploy Flask API
+
+1. Click "New" → "Web Service"
+2. Connect your GitHub repository
+3. Fill in the details:
+   - **Name:** `food-freshness-api`
+   - **Environment:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT`
+4. Click "Create Web Service"
+
+### Step 3: Verify Deployment
+
+```bash
+# Health check endpoint
+curl https://your-app.onrender.com/api/health
+
+# Expected response:
+{
+  "status": "OK",
+  "model_loaded": true,
+  "model_path": "/opt/render/project/artifacts/model.tflite"
+}
+
+# Test prediction
+curl -X POST https://your-app.onrender.com/api/predict \
+  -F "image=@test_image.jpg"
+```
+
+### Step 4: Environment Variables (Optional)
+
+In Render dashboard:
+1. Go to Settings → Environment
+2. Add variables if needed:
+   - `PYTHONUNBUFFERED=true`
+
+### Troubleshooting Render Deployment
+
+**Issue: Model not found**
+
+Solution: Ensure model files are committed:
+```bash
+git status  # Check if artifacts/ shows
+git add artifacts/
+git commit -m "Add model files"
+git push origin main
+```
+
+**Issue: Build fails**
+
+Check the Build Log in Render Dashboard:
+- Click on your service
+- Go to "Logs" tab
+- Look for errors
+
+**Issue: App crashes after deploy**
+
+Check the Deploy Log:
+1. Click your service
+2. Go to "Logs" tab
+3. Look at startup errors
+4. Check `/api/health` endpoint for details
+
+### render.yaml Configuration
+
+Your project now includes `render.yaml` for auto-deployment:
+
+```yaml
+services:
+  - type: web
+    name: food-freshness-api
+    runtime: python-3.11
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    plan: free
+```
+
+### Monitoring & Logs
+
+```bash
+# View all logs
+# In Render dashboard: Logs tab
+
+# Stream logs in real-time (if SSH available):
+ssh into container and run:
+tail -f /var/log/service.log
+```
+
+### Database Integration (Optional)
+
+If you want to use Render PostgreSQL:
+
+1. Create PostgreSQL database in Render
+2. Get connection string from Render dashboard
+3. Update your app to use the connection string
+4. Add environment variable:
+   ```
+   DATABASE_URL=postgresql://user:pass@host:port/db
+   ```
+
+### Node.js Backend on Render (Optional)
+
+To also deploy the Node.js backend:
+
+1. Create another Web Service
+2. Point to `Backend/` directory
+3. Build Command: `npm install`
+4. Start Command: `npm start`
+
+### Domain & SSL
+
+Render automatically provides:
+- Free SSL certificate
+- Subdomain: `your-app.onrender.com`
+
+To use custom domain:
+1. Settings → Custom Domain
+2. Add your domain
+3. Update DNS records per Render instructions
+
+### Automatic Redeploys
+
+Every time you push to `main` branch:
+```bash
+git push origin main  # Automatically triggers Render deploy
+```
+
+To manually trigger:
+- Go to Render dashboard
+- Click "Manual Deploy" → "Deploy latest commit"
+
+---
+
+## Final Deployment Checklist
+
+- [ ] Models committed to Git (`git add artifacts/`)
+- [ ] requirements.txt has all dependencies
+- [ ] .gitignore doesn't exclude model files
+- [ ] Environment variables configured
+- [ ] API endpoints tested locally
+- [ ] render.yaml created and configured
+- [ ] Git changes pushed to main branch
+- [ ] Render deploy completes successfully
+- [ ] Health endpoint returns model_loaded: true
+- [ ] Test prediction endpoint works
+- [ ] Monitor logs for any runtime errors
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |

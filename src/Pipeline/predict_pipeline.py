@@ -8,20 +8,28 @@ class PredictPipeline:
 
     def __init__(self, model_path):
 
+        self.model_path = model_path
+        self.interpreter = None
+        self.input_details = None
+        self.output_details = None
+
+        print(f"🔍 Model path: {model_path}")
+        print(f"🔍 Model exists: {os.path.exists(model_path)}")
+
         if not os.path.exists(model_path):
-            raise Exception(f"Model not found: {model_path}")
+            raise Exception(f"Model not found at: {model_path}\nAbsolute path: {os.path.abspath(model_path)}")
 
         # ================= LOAD MODEL =================
-        self.interpreter = tflite.Interpreter(
-            model_path=model_path
-        )
-
-        self.interpreter.allocate_tensors()
-
-        self.input_details = self.interpreter.get_input_details()
-        self.output_details = self.interpreter.get_output_details()
-
-        print("✅ TFLite model loaded")
+        try:
+            self.interpreter = tflite.Interpreter(
+                model_path=model_path
+            )
+            self.interpreter.allocate_tensors()
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+            print("✅ TFLite model loaded successfully")
+        except Exception as e:
+            raise Exception(f"Failed to load model: {str(e)}")
 
 
     def predict(self, image_path, class_indices):
