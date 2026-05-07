@@ -1,4 +1,5 @@
 services:
+  # =============== PYTHON FLASK API ===============
   - type: web
     name: food-freshness-api
     runtime: python-3.11
@@ -11,5 +12,31 @@ services:
         value: 3.11.9
       - key: PYTHONUNBUFFERED
         value: true
+    plan: free
+    region: oregon
+
+  # =============== NODE.JS BACKEND ===============
+  - type: web
+    name: food-freshness-backend
+    runtime: node
+    buildCommand: |
+      cd Backend
+      npm install --production
+    startCommand: cd Backend && node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FLASK_URL
+        value: https://food-freshness-api-xxxx.onrender.com
+      - key: MYSQL_HOST
+        value: your_mysql_host
+      - key: MYSQL_USER
+        value: your_mysql_user
+      - key: MYSQL_PASSWORD
+        value: your_mysql_password
+      - key: MYSQL_DATABASE
+        value: food_db
+      - key: MYSQL_PORT
+        value: "3306"
     plan: free
     region: oregon
