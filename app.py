@@ -3,35 +3,52 @@ import os
 from werkzeug.utils import secure_filename
 from src.Pipeline.predict_pipeline import PredictPipeline
 
-# ✅ APP INIT
+# ================= APP INIT =================
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ✅ ABSOLUTE MODEL PATH FIX
+# ================= MODEL PATH =================
 BASE_DIR = os.getcwd()
-MODEL_PATH = os.path.join(BASE_DIR, "artifacts", "model.tflite")
+
+MODEL_PATH = os.path.join(
+    BASE_DIR,
+    "artifacts",
+    "model.tflite"
+)
 
 print("🔥 MODEL PATH:", MODEL_PATH)
 
-# ✅ LOAD MODEL
+# ================= LOAD MODEL =================
 predictor = PredictPipeline(MODEL_PATH)
 
+# ================= CLASSES =================
 CLASS_INDICES = {
     "freshapple": 0,
     "rottenapple": 1
 }
 
 # ================= HEALTH =================
+@app.route("/")
+def home():
+    return jsonify({
+        "success": True,
+        "message": "Food Freshness API Running 🚀"
+    })
+
+
 @app.route("/api/health")
 def health():
-    return {"status": "OK"}
+    return jsonify({
+        "status": "OK"
+    })
 
 
 # ================= PREDICT =================
 @app.route("/api/predict", methods=["POST"])
 def predict():
+
     try:
 
         # ✅ CHECK FILE
@@ -49,48 +66,64 @@ def predict():
                 "error": "Empty filename"
             })
 
+        # ✅ SECURE NAME
         filename = secure_filename(file.filename)
 
-        path = os.path.join(UPLOAD_FOLDER, filename)
+        # ✅ SAVE PATH
+        image_path = os.path.join(
+            UPLOAD_FOLDER,
+            filename
+        )
 
-        # ✅ SAVE FILE
-        file.save(path)
+        # ✅ SAVE IMAGE
+        file.save(image_path)
 
-        print("🔥 IMAGE SAVED:", path)
+        print("🔥 IMAGE SAVED:", image_path)
 
-        # ✅ PREDICT
-        result = predictor.predict(path, CLASS_INDICES)
+        # ================= PREDICT =================
+        result = predictor.predict(
+            image_path,
+            CLASS_INDICES
+        )
 
         print("🔥 RESULT:", result)
 
-        # ✅ DELETE TEMP FILE
-        if os.path.exists(path):
-            os.remove(path)
+        # ✅ DELETE TEMP IMAGE
+        if os.path.exists(image_path):
+            os.remove(image_path)
 
         # ✅ SAFETY CHECK
         if not result:
             return jsonify({
                 "success": False,
-                "error": "Prediction returned None"
+                "error": "Prediction failed"
             })
 
         if "class" not in result:
             return jsonify({
                 "success": False,
-                "error": "Class not found in result"
+                "error": "Class not found"
             })
 
+        predicted_class = result["class"]
+
+        confidence = float(
+            result["confidence"]
+        )
+
+        # ✅ FRESHNESS
         freshness = "Fresh"
 
-        if "rotten" in result["class"].lower():
+        if "rotten" in predicted_class.lower():
             freshness = "Rotten"
 
+        # ================= RESPONSE =================
         return jsonify({
             "success": True,
             "prediction": {
-                "class": result["class"],
+                "class": predicted_class,
                 "freshness": freshness,
-                "confidence": float(result["confidence"])
+                "confidence": confidence
             }
         })
 
@@ -107,7 +140,9 @@ def predict():
 # ================= START =================
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT", 8000))
+    port = int(
+        os.environ.get("PORT", 10000)
+    )
 
     app.run(
         host="0.0.0.0",
