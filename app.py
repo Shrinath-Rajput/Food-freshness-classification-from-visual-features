@@ -6,6 +6,7 @@ from src.Pipeline.predict_pipeline import PredictPipeline
 # ================= APP INIT =================
 app = Flask(__name__)
 
+# ================= FOLDERS =================
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -29,17 +30,20 @@ CLASS_INDICES = {
     "rottenapple": 1
 }
 
-# ================= HEALTH =================
+# ================= HOME =================
 @app.route("/")
 def home():
+
     return jsonify({
         "success": True,
         "message": "Food Freshness API Running 🚀"
     })
 
 
+# ================= HEALTH =================
 @app.route("/api/health")
 def health():
+
     return jsonify({
         "status": "OK"
     })
@@ -51,8 +55,9 @@ def predict():
 
     try:
 
-        # ✅ CHECK FILE
+        # ================= CHECK FILE =================
         if "image" not in request.files:
+
             return jsonify({
                 "success": False,
                 "error": "No file uploaded"
@@ -61,21 +66,20 @@ def predict():
         file = request.files["image"]
 
         if file.filename == "":
+
             return jsonify({
                 "success": False,
                 "error": "Empty filename"
             })
 
-        # ✅ SECURE NAME
+        # ================= SAVE IMAGE =================
         filename = secure_filename(file.filename)
 
-        # ✅ SAVE PATH
         image_path = os.path.join(
             UPLOAD_FOLDER,
             filename
         )
 
-        # ✅ SAVE IMAGE
         file.save(image_path)
 
         print("🔥 IMAGE SAVED:", image_path)
@@ -88,18 +92,21 @@ def predict():
 
         print("🔥 RESULT:", result)
 
-        # ✅ DELETE TEMP IMAGE
+        # ================= DELETE TEMP IMAGE =================
         if os.path.exists(image_path):
+
             os.remove(image_path)
 
-        # ✅ SAFETY CHECK
+        # ================= VALIDATION =================
         if not result:
+
             return jsonify({
                 "success": False,
                 "error": "Prediction failed"
             })
 
         if "class" not in result:
+
             return jsonify({
                 "success": False,
                 "error": "Class not found"
@@ -111,10 +118,11 @@ def predict():
             result["confidence"]
         )
 
-        # ✅ FRESHNESS
+        # ================= FRESHNESS =================
         freshness = "Fresh"
 
         if "rotten" in predicted_class.lower():
+
             freshness = "Rotten"
 
         # ================= RESPONSE =================
