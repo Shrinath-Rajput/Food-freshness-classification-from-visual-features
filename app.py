@@ -3,7 +3,7 @@ import os
 from werkzeug.utils import secure_filename
 from src.Pipeline.predict_pipeline import PredictPipeline
 
-# ================= APP INIT =================
+# ================= APP =================
 app = Flask(__name__)
 
 # ================= FOLDERS =================
@@ -11,7 +11,6 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ================= MODEL PATH =================
-# Use __file__ instead of getcwd() for reliable path resolution
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 MODEL_PATH = os.path.join(
@@ -20,22 +19,29 @@ MODEL_PATH = os.path.join(
     "model.tflite"
 )
 
-print(f"✅ Flask app initializing...")
-print(f"🔥 BASE_DIR: {BASE_DIR}")
-print(f"🔥 MODEL_PATH: {MODEL_PATH}")
-print(f"🔥 Model exists: {os.path.exists(MODEL_PATH)}")
-print(f"✅ App will load model on first request (lazy loading)")
+print("🚀 Flask Starting...")
+print("📂 BASE_DIR:", BASE_DIR)
+print("📦 MODEL_PATH:", MODEL_PATH)
+print("✅ MODEL EXISTS:", os.path.exists(MODEL_PATH))
 
-# ================= GLOBAL PREDICTOR (LAZY LOADED) =================
+# ================= GLOBAL PREDICTOR =================
 predictor = None
 
+
 def get_predictor():
-    """Lazy load predictor on first use"""
+
     global predictor
+
     if predictor is None:
-        print("📦 Loading model predictor...")
+
+        print("📦 Loading Model...")
+
         predictor = PredictPipeline(MODEL_PATH)
+
+        print("✅ Model Loaded")
+
     return predictor
+
 
 # ================= CLASSES =================
 CLASS_INDICES = {
@@ -54,37 +60,40 @@ def home():
 
 
 # ================= HEALTH =================
-@app.route("/api/health")
+@app.route("/health")
 def health():
+
     try:
+
         predictor = get_predictor()
+
         return jsonify({
-            "status": "OK",
+            "success": True,
             "model_loaded": True,
             "model_path": MODEL_PATH
         })
+
     except Exception as e:
+
         return jsonify({
-            "status": "ERROR",
-            "model_loaded": False,
-            "error": str(e),
-            "model_path": MODEL_PATH
-        }), 503
+            "success": False,
+            "error": str(e)
+        }), 500
 
 
 # ================= PREDICT =================
-@app.route("/api/predict", methods=["POST"])
+@app.route("/predict", methods=["POST"])
 def predict():
 
     try:
 
-        # ================= CHECK FILE =================
+        # ================= FILE CHECK =================
         if "image" not in request.files:
 
             return jsonify({
                 "success": False,
-                "error": "No file uploaded"
-            })
+                "error": "No image uploaded"
+            }), 400
 
         file = request.files["image"]
 
@@ -93,9 +102,9 @@ def predict():
             return jsonify({
                 "success": False,
                 "error": "Empty filename"
-            })
+            }), 400
 
-        # ================= SAVE IMAGE =================
+        # ================= SAVE FILE =================
         filename = secure_filename(file.filename)
 
         image_path = os.path.join(
@@ -105,19 +114,10 @@ def predict():
 
         file.save(image_path)
 
-        print("🔥 IMAGE SAVED:", image_path)
+        print("📷 IMAGE SAVED:", image_path)
 
-        # ================= LOAD PREDICTOR (LAZY LOAD) =================
-        try:
-            predictor = get_predictor()
-        except Exception as e:
-            print(f"❌ Failed to load predictor: {str(e)}")
-            if os.path.exists(image_path):
-                os.remove(image_path)
-            return jsonify({
-                "success": False,
-                "error": f"Model loading failed: {str(e)}"
-            }), 503
+        # ================= LOAD MODEL =================
+        predictor = get_predictor()
 
         # ================= PREDICT =================
         result = predictor.predict(
@@ -127,30 +127,29 @@ def predict():
 
         print("🔥 RESULT:", result)
 
-        # ================= DELETE TEMP IMAGE =================
+        # ================= DELETE IMAGE =================
         if os.path.exists(image_path):
 
             os.remove(image_path)
 
-        # ================= VALIDATION =================
+        # ================= VALIDATE =================
         if not result:
 
             return jsonify({
                 "success": False,
                 "error": "Prediction failed"
-            })
+            }), 500
 
-        if "class" not in result:
-
-            return jsonify({
-                "success": False,
-                "error": "Class not found"
-            })
-
-        predicted_class = result["class"]
+        predicted_class = result.get(
+            "class",
+            "Unknown"
+        )
 
         confidence = float(
-            result["confidence"]
+            result.get(
+                "confidence",
+                0
+            )
         )
 
         # ================= FRESHNESS =================
@@ -177,18 +176,21 @@ def predict():
         return jsonify({
             "success": False,
             "error": str(e)
-        })
+        }), 500
 
 
 # ================= START =================
 if __name__ == "__main__":
 
-    port = int(
-        os.environ.get("PORT", 10000)
+    PORT = int(
+        os.environ.get(
+            "PORT",
+            10000
+        )
     )
 
     app.run(
         host="0.0.0.0",
-        port=port,
+        port=PORT,
         debug=False
     )
