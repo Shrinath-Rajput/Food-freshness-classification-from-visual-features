@@ -1,57 +1,79 @@
 import os
 import numpy as np
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 
-class PredictPipeline:
-    def __init__(self, model_path="artifacts/model.tflite"):
-        if not os.path.exists(model_path):
-            raise Exception("Model not found")
 
-        # 🔥 Load TFLite model
-        self.interpreter = tf.lite.Interpreter(model_path=model_path)
+class PredictPipeline:
+
+    def __init__(self, model_path):
+
+        if not os.path.exists(model_path):
+            raise Exception(f"Model not found: {model_path}")
+
+        # ================= LOAD MODEL =================
+        self.interpreter = tflite.Interpreter(
+            model_path=model_path
+        )
+
         self.interpreter.allocate_tensors()
 
         self.input_details = self.interpreter.get_input_details()
         self.output_details = self.interpreter.get_output_details()
 
+        print("✅ TFLite model loaded")
+
+
     def predict(self, image_path, class_indices):
+
         try:
-            # ✅ Image preprocess
-            img = load_img(image_path, target_size=(224, 224))
-            img = img_to_array(img) / 255.0
-            img = np.expand_dims(img, axis=0).astype(np.float32)
 
-            # 🔥 Set input
-            self.interpreter.set_tensor(self.input_details[0]['index'], img)
+            # ================= LOAD IMAGE =================
+            img = load_img(
+                image_path,
+                target_size=(224, 224)
+            )
 
-            # 🔥 Run inference
+            img = img_to_array(img)
+
+            img = img.astype(np.float32) / 255.0
+
+            img = np.expand_dims(img, axis=0)
+
+            # ================= INPUT =================
+            self.interpreter.set_tensor(
+                self.input_details[0]['index'],
+                img
+            )
+
+            # ================= RUN MODEL =================
             self.interpreter.invoke()
 
-            # 🔥 Get output
-            preds = self.interpreter.get_tensor(self.output_details[0]['index'])[0]
+            # ================= OUTPUT =================
+            preds = self.interpreter.get_tensor(
+                self.output_details[0]['index']
+            )[0]
 
-            print("🔥 RAW:", preds)
+            print("🔥 RAW PREDICTION:", preds)
 
             idx = int(np.argmax(preds))
+
             confidence = float(preds[idx])
 
-            # ✅ SAFE mapping
             class_names = list(class_indices.keys())
 
-            if len(class_names) == 0:
-                return {"class": "unknown", "confidence": 0}
-
-            if idx >= len(class_names):
-                idx = 0
-
-            class_name = class_names[idx]
+            predicted_class = class_names[idx]
 
             return {
-                "class": class_name,
+                "class": predicted_class,
                 "confidence": confidence
             }
 
         except Exception as e:
-            print("❌ ERROR IN PREDICT:", e)
-            return {"class": "unknown", "confidence": 0}
+
+            print("❌ PREDICT ERROR:", str(e))
+
+            return {
+                "class": "unknown",
+                "confidence": 0
+            }

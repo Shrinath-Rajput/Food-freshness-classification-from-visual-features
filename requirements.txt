@@ -1,42 +1,56 @@
-﻿# 🔧 Build Fix (IMPORTANT)
+﻿# =========================
+# BUILD FIX
+# =========================
 pip==24.0
 setuptools==68.2.2
-setuptools>=68.0.0
 wheel
 
-# Core Dependencies
+# =========================
+# CORE
+# =========================
 numpy==1.24.3
 pandas==2.0.3
 scipy==1.11.0
 
-# Image Processing
-opencv-python-headless==4.8.0.74
+# =========================
+# IMAGE PROCESSING
+# =========================
+opencv-python-headless==4.8.0.76
 Pillow==10.0.0
 
-# Machine Learning & Deep Learning
+# =========================
+# MACHINE LEARNING
+# =========================
 scikit-learn==1.3.0
-tensorflow==2.13.0
-# ❌ keras REMOVE केलं (TensorFlow मध्ये already असतं)
 
-# Flask Web Framework
+# ✅ LIGHTWEIGHT TFLITE
+tflite-runtime==2.14.0
+
+# =========================
+# FLASK
+# =========================
 flask==2.3.3
 flask-cors==4.0.0
 gunicorn==21.2.0
 werkzeug==2.3.7
 
-# Data & Model Management
+# =========================
+# UTILITIES
+# =========================
 dill==0.3.7
 python-dotenv==1.0.0
 joblib==1.3.1
-
-# Visualization (optional but ठेवू शकतो)
-matplotlib==3.7.2
-seaborn==0.12.2
-
-# Utilities
 tqdm==4.66.0
 requests==2.31.0
 
-# Development
+# =========================
+# OPTIONAL
+# =========================
+matplotlib==3.7.2
+seaborn==0.12.2
+
+# =========================
+# DATE
+# =========================
 python-dateutil==2.8.2
 pytz==2023.3
